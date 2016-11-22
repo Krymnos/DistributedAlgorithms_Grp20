@@ -23,7 +23,7 @@ public class VectorClock {
 	}
 	/**
 	 * compare the logical time of this VectorClock with another VC of the same size.
-	 * @return -1 = before, 0 = concurrent, 1 = after
+	 * @return -1 = happened before, 0 = concurrent, 1 = happened after
 	 */
 	public int compare(VectorClock vc){
 		int before = 0;

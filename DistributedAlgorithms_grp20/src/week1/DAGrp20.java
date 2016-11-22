@@ -4,6 +4,7 @@ import java.rmi.registry.*;
 import java.rmi.server.RMIClientSocketFactory;
 import java.rmi.server.RMIServerSocketFactory;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.ArrayList;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -17,6 +18,7 @@ public class DAGrp20 extends UnicastRemoteObject implements DAGrp20_RMI {
 	private int i;		//process id
 	private VectorClock v;	//vector clock
 	private Buffer s;	//local buffer
+	private ArrayList<MessageBuffer> b;
 	private static Registry registry = null;
 	
 	public static void main(String argv[]){
@@ -74,7 +76,8 @@ public class DAGrp20 extends UnicastRemoteObject implements DAGrp20_RMI {
 	public DAGrp20(int i) throws RemoteException {
 		this.setI(i); //set process id
 		this.v = new VectorClock(n);
-		this.s = null;
+		this.s = new Buffer(n);
+		this.b = new ArrayList<MessageBuffer>();
 	}
 
 	@Override
@@ -92,18 +95,31 @@ public class DAGrp20 extends UnicastRemoteObject implements DAGrp20_RMI {
 		} catch (NotBoundException e) {
 			e.printStackTrace();
 		}
-		if(s == null){
-			this.s = new Buffer(i, v);
-		} else {
-			s.p = i;
-			s.vc = v;
-		}
+		//insert pair into local buffer
+			s.p[i] = i;
+			s.vc[i] = v;
+		
 	}
 
 	@Override
 	public void receive(String m, Buffer s, VectorClock v) throws RemoteException {
-		System.out.println("Message: "+m+" Time "+v);
-		// test if(v[i])
+		System.out.println("Received message: "+m+" Time "+v);
+		// test if delivery condition is met
+		if(s.p[i] == -1 || s.vc[i].compare(this.v) == -1){
+			System.out.println("Delivered message:"+m+" to Process"+i);
+			for (int i = 0; i < n; i++) {
+				if(s.p[i] == -1){
+					if(this.s.p[i] == -1 || this.s.vc[i].compare(s.vc[i]) == -1){
+						this.s.p[i] = s.p[i];
+						this.s.vc[i] = s.vc[i];
+						System.out.println("Updated buffer entry "+i+" with "+s.vc[i]);
+					}
+				}
+			}
+		} else {
+			//TODO read buffered messages?
+			b.add(new MessageBuffer(m, s, v));
+		}
 		
 	}
 	
