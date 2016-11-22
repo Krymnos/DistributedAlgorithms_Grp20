@@ -13,4 +13,13 @@ public class Buffer {
 	    }
 		this.vc = new VectorClock[size];
 	}
+	
+	@Override
+	public String toString(){
+		String s = "[";
+		for (int i = 0; i < size; i++) {
+			s+="("+p[i]+", "+vc[i]+")";	//TODO not working
+		}
+		return s+="]";
+	}
 }

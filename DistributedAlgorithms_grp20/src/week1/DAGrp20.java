@@ -13,7 +13,7 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 public class DAGrp20 extends UnicastRemoteObject implements DAGrp20_RMI {
 	//number of processes n
-	private static int port = 1098;
+	private static int port = 1099;
 	private static int n = 3;
 	private int i;		//process id
 	private VectorClock v;	//vector clock
@@ -50,10 +50,19 @@ public class DAGrp20 extends UnicastRemoteObject implements DAGrp20_RMI {
 		}
         try {	//test messaging
         	for(int i=0; i<n; i++){
-        		int r = ThreadLocalRandom.current().nextInt(1, n + 1);
-				DAGrp20 rec = (DAGrp20) registry.lookup("Process"+r);
-				String m = "Test to "+r;
-				rec.send(m, r);
+        		DAGrp20 send = (DAGrp20) registry.lookup("Process"+i);
+        		int r = ThreadLocalRandom.current().nextInt(0, n);
+				String m = "From "+i+" to "+r;
+				send.send(m, r);
+				r = ThreadLocalRandom.current().nextInt(0, n);
+				m = "From "+i+" to "+r;
+				send.send(m, r);
+				r = ThreadLocalRandom.current().nextInt(0, n);
+				m = "From "+i+" to "+r;
+				send.send(m, r);
+				r = ThreadLocalRandom.current().nextInt(0, n);
+				m = "From "+i+" to "+r;
+				send.send(m, r);
         	}
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -63,14 +72,7 @@ public class DAGrp20 extends UnicastRemoteObject implements DAGrp20_RMI {
 	
 
 	/**
-	 * @throws RemoteException
-	 */
-	public DAGrp20() throws RemoteException {
-		// TODO Auto-generated constructor stub
-	}
-
-	/**
-	 * @param arg0
+	 * @param id
 	 * @throws RemoteException
 	 */
 	public DAGrp20(int i) throws RemoteException {
@@ -82,13 +84,13 @@ public class DAGrp20 extends UnicastRemoteObject implements DAGrp20_RMI {
 
 	@Override
 	public void send(String m, int recipient) throws RemoteException {
-		try {	//random delay
+		/*try {	//random delay
 			Thread.sleep((long)(Math.random() * 2000));
 		} catch (InterruptedException e1) {
 			e1.printStackTrace();
-		}
+		}*/
 		
-		v.increment(i);	//increment local time
+		this.v.increment(i);	//increment local time
 		try {	
 			DAGrp20 recip = (DAGrp20) registry.lookup("Process"+recipient);
 			recip.receive(m, s, v);	//invoke remote method
@@ -96,19 +98,19 @@ public class DAGrp20 extends UnicastRemoteObject implements DAGrp20_RMI {
 			e.printStackTrace();
 		}
 		//insert pair into local buffer
-			s.p[i] = i;
-			s.vc[i] = v;
+			this.s.p[recipient] = recipient;
+			this.s.vc[recipient] = v;
 		
 	}
 
 	@Override
 	public void receive(String m, Buffer s, VectorClock v) throws RemoteException {
-		System.out.println("Received message: "+m+" Time "+v);
+		System.out.println("Received message: "+m+" "+s+" "+v);
 		// test if delivery condition is met
-		if(s.p[i] == -1 || s.vc[i].compare(this.v) == -1){
+		if(s.p[i] == -1 || s.vc[i].compare(this.v) >= 0){
 			System.out.println("Delivered message:"+m+" to Process"+i);
 			for (int i = 0; i < n; i++) {
-				if(s.p[i] == -1){
+				if(s.p[i] != -1){
 					if(this.s.p[i] == -1 || this.s.vc[i].compare(s.vc[i]) == -1){
 						this.s.p[i] = s.p[i];
 						this.s.vc[i] = s.vc[i];
@@ -116,9 +118,12 @@ public class DAGrp20 extends UnicastRemoteObject implements DAGrp20_RMI {
 					}
 				}
 			}
+			this.v.update(v);
+			this.v.increment(i);
 		} else {
 			//TODO read buffered messages?
 			b.add(new MessageBuffer(m, s, v));
+			System.out.println("Buffered message");
 		}
 		
 	}

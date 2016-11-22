@@ -44,6 +44,12 @@ public class VectorClock {
 		}
 		return result;
 	}
+	public void update(VectorClock vc){
+		for (int i = 0; i < size; i++) {
+			this.v[i] = Math.max(v[i], vc.getElement(i));
+		}
+		
+	}
 	
 	@Override
 	public String toString(){
