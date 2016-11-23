@@ -1,6 +1,12 @@
 package week1;
 
-public class VectorClock {
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
+
+public class VectorClock implements Cloneable, Serializable{
 	
 	private int size;
 	private int[] v;
@@ -59,4 +65,20 @@ public class VectorClock {
 		}
 		return s;
 	}
+	
+	protected VectorClock deepClone() throws CloneNotSupportedException {
+		try {
+		     ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		     ObjectOutputStream oos = new ObjectOutputStream(baos);
+		     oos.writeObject(this);
+		     ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
+		     ObjectInputStream ois = new ObjectInputStream(bais);
+		     return (VectorClock) ois.readObject();
+		   }
+		   catch (Exception e) {
+		     e.printStackTrace();
+		     return null;
+		   }
+    }
+	
 }

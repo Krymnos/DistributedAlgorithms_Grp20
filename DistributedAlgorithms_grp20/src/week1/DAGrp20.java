@@ -1,4 +1,8 @@
 package week1;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.rmi.*;
 import java.rmi.registry.*;
 import java.rmi.server.RMIClientSocketFactory;
@@ -67,7 +71,7 @@ public class DAGrp20 extends UnicastRemoteObject implements DAGrp20_RMI {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-        
+        System.exit(0);
 	}
 	
 
@@ -93,13 +97,16 @@ public class DAGrp20 extends UnicastRemoteObject implements DAGrp20_RMI {
 		this.v.increment(i);	//increment local time
 		try {	
 			DAGrp20 recip = (DAGrp20) registry.lookup("Process"+recipient);
-			recip.receive(m, s, v);	//invoke remote method
+			recip.receive(m, deepClone(s), v);	//invoke remote method
 		} catch (NotBoundException e) {
+			e.printStackTrace();
+		} catch (CloneNotSupportedException e) {
 			e.printStackTrace();
 		}
 		//insert pair into local buffer
-			this.s.p[recipient] = recipient;
-			this.s.vc[recipient] = v;
+		System.out.println("update Buffer of "+i);
+		this.s.p[recipient] = recipient;
+		this.s.vc[recipient] = v;
 		
 	}
 
@@ -134,8 +141,20 @@ public class DAGrp20 extends UnicastRemoteObject implements DAGrp20_RMI {
 	public void setI(int i) {
 		this.i = i;
 	}
-
-
 	
+	private Buffer deepClone(Buffer b) throws CloneNotSupportedException {
+		try {
+		     ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		     ObjectOutputStream oos = new ObjectOutputStream(baos);
+		     oos.writeObject(b);
+		     ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
+		     ObjectInputStream ois = new ObjectInputStream(bais);
+		     return (Buffer) ois.readObject();
+		   }
+		   catch (Exception e) {
+		     e.printStackTrace();
+		     return null;
+		   }
+    }
 
 }
