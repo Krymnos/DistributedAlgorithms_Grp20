@@ -27,7 +27,7 @@ public class Buffer implements Cloneable, Serializable{
 		}
 		return s+="]";
 	}
-	/*
+	
 	@Override
     protected Object clone() throws CloneNotSupportedException {
 		return deepClone(this);
@@ -46,5 +46,5 @@ public class Buffer implements Cloneable, Serializable{
 		     e.printStackTrace();
 		     return null;
 		   }
-    }*/
+    }
 }
