@@ -3,6 +3,7 @@
  */
 package week2;
 
+import java.io.Serializable;
 import java.rmi.AlreadyBoundException;
 import java.rmi.NotBoundException;
 import java.rmi.Remote;
@@ -14,7 +15,7 @@ import java.rmi.registry.Registry;
  * @author Ron
  *
  */
-public class Component implements Component_RMI, Runnable {
+public class Component implements Component_RMI, Runnable, Serializable {
 	private int i;	//id
 	private int[] N;	
 	private char[] S;
@@ -71,7 +72,7 @@ public class Component implements Component_RMI, Runnable {
 			for (int i = 0; i < r.list().length; i++) {
 				System.out.println(r.list()[i].toString());
 			}
-			Component p = (Component) reg.lookup("Process" + j);
+			Component p = (Component) r.lookup("Process" + j);
 			p.receiveReq(i, N[i]);	//TODO stackoverflow
 		} catch (RemoteException | NotBoundException e) {
 			e.printStackTrace();
