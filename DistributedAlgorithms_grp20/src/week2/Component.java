@@ -20,13 +20,12 @@ public class Component implements Component_RMI, Runnable {
 	private char[] S;
 	private Token t;
 	private static int port = 2000;
-	private static Registry reg = null;
+	private Registry reg = null;
 	
-	public Component(int size, int id, Registry registry){
+	public Component(int size, int id){
 		this.N = new int[size];
 		this.S = new char[size];
 		this.i = id;
-		Component.reg = registry;
 		
 		
 		//initialize state arrays
@@ -68,6 +67,10 @@ public class Component implements Component_RMI, Runnable {
 	private void sendRequestTo(int j){
 		//System.out.println(i+": Send Request To: "+ j);
 		try {	
+			Registry r = LocateRegistry.getRegistry(port+j);
+			for (int i = 0; i < r.list().length; i++) {
+				System.out.println(r.list()[i].toString());
+			}
 			Component p = (Component) reg.lookup("Process" + j);
 			p.receiveReq(i, N[i]);	//TODO stackoverflow
 		} catch (RemoteException | NotBoundException e) {
@@ -98,7 +101,7 @@ public class Component implements Component_RMI, Runnable {
 		case 'R':
 			if(S[j] != 'R')
 				S[j] = 'R';	
-				sendRequestTo(j); //TODO
+				sendRequestTo(j); //TODO stackoverflow
 			break;
 		case 'H':
 			S[j] = 'R';

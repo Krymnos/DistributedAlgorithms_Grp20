@@ -23,7 +23,7 @@ public class Main {
 		
 		for (int i = 0; i < n; i++) { // create processes
 			try {
-				Thread process = new Thread(new Component(n, i, registry));
+				Thread process = new Thread(new Component(n, i));
 				process.start();
 
 			} catch (Exception e) {
