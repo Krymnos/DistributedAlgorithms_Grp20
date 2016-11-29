@@ -1,5 +1,6 @@
 package week2;
 
+import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
@@ -13,43 +14,28 @@ import week1.DAGrp20;
  */
 public class Main {
 	private static Registry registry = null;
-	private static int port = 1098;
-	private static int n = 3;
+	private static int n = 4;
 	
 	public static void main(String argv[]) {
 		// add when using multiple machines
 		// System.setSecurityManager(new RMISecurityManager());
 
-		// create registry
-		try {
-			registry = LocateRegistry.createRegistry(port);
-		} catch (RemoteException e1) {
-			e1.printStackTrace();
-		}
+		
 		for (int i = 0; i < n; i++) { // create processes
 			try {
-				// create stub
-				Component process = new Component(n, i);
+				Thread process = new Thread(new Component(n, i, registry));
+				process.start();
 
-				// Bind the remote object's stub in the registry
-				String name = "Process" + i;
-				registry.bind(name, process);
-
-				System.err.println(name + " is ready");
 			} catch (Exception e) {
-				System.err.println("Server exception: " + e.toString());
 				e.printStackTrace();
 			}
 		}
-		try { // test messaging
-			for (int i = 0; i < n; i++) {
-				Component p = (Component) registry.lookup("Process" + i);
-				System.out.println(p.toString());
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		System.exit(0);
+		
+		
+		//System.exit(0);
+	}
+	public Registry getRegistry(){
+		return registry;
 	}
 
 }
