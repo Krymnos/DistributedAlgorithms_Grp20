@@ -22,12 +22,13 @@ public class Component implements Component_RMI, Runnable, Serializable {
 	private Token t;
 	private static int port = 2000;
 	private Registry reg = null;
+	private int size;
 	
 	public Component(int size, int id){
 		this.N = new int[size];
 		this.S = new char[size];
 		this.i = id;
-		
+		this.size = size;
 		
 		//initialize state arrays
 		if(id == 0){
@@ -50,29 +51,29 @@ public class Component implements Component_RMI, Runnable, Serializable {
 	 */
 	public void request(){
 		if(S[i] == 'H')
-			return;
+			return; 		//sendRequestTo(i, N[i]);
 		S[i] = 'R';	//set own state to requesting
 		N[i]++;		//increment request number
 		for (int j = 0; j < this.i; j++) {
 			if(S[j] == 'R'){
-				sendRequestTo(j);
+				sendRequestTo(j,this.i);
 			}
 		}
 		for (int j = this.i+1; j < N.length; j++) {	//leave out this.i
 			if(S[j] == 'R'){
-				sendRequestTo(j);
+				sendRequestTo(j,this.i);
 			}
 		}
 	}
 	
-	private void sendRequestTo(int j){
-		//System.out.println(i+": Send Request To: "+ j);
+	private void sendRequestTo(int j, int id){
+		//System.out.println(i+": Send Request To: "+ j);	
 		try {	
-			Registry r = LocateRegistry.getRegistry(port+j);
-			for (int i = 0; i < r.list().length; i++) {
-				System.out.println(r.list()[i].toString());
-			}
-			Component p = (Component) r.lookup("Process" + j);
+			Registry r = LocateRegistry.getRegistry(port+id);
+			//for (int i = 0; i < r.list().length; i++) {
+				//System.out.println(r.list()[i].toString());
+			//}
+			Component p = (Component) r.lookup("Process" + id);
 			p.receiveReq(i, N[i]);	//TODO stackoverflow
 		} catch (RemoteException | NotBoundException e) {
 			e.printStackTrace();
@@ -102,7 +103,7 @@ public class Component implements Component_RMI, Runnable, Serializable {
 		case 'R':
 			if(S[j] != 'R')
 				S[j] = 'R';	
-				sendRequestTo(j); //TODO stackoverflow
+				sendRequestTo(j, this.i); //TODO stackoverflow
 			break;
 		case 'H':
 			S[j] = 'R';
@@ -153,6 +154,7 @@ public class Component implements Component_RMI, Runnable, Serializable {
 		return s+")";
 		
 	}
+	
 	@Override
 	public void run() {
 		try {
@@ -164,12 +166,11 @@ public class Component implements Component_RMI, Runnable, Serializable {
 		} catch (RemoteException | AlreadyBoundException e) {
 			e.printStackTrace();
 		}
-		
 		try {	//random delay
 			Thread.sleep((long)(Math.random() * 9000));
 		} catch (InterruptedException e1) {
 			e1.printStackTrace();
-		}
+		}	
 		request();
 		
 	}
