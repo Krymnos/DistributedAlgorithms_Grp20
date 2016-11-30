@@ -70,9 +70,6 @@ public class Component implements Component_RMI, Runnable, Serializable {
 		//System.out.println(i+": Send Request To: "+ j);	
 		try {	
 			Registry r = LocateRegistry.getRegistry(port+id);
-			//for (int i = 0; i < r.list().length; i++) {
-				//System.out.println(r.list()[i].toString());
-			//}
 			Component p = (Component) r.lookup("Process" + id);
 			p.receiveReq(i, N[i]);	//TODO stackoverflow
 		} catch (RemoteException | NotBoundException e) {
