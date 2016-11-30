@@ -19,34 +19,28 @@ import java.util.concurrent.ThreadLocalRandom;
 public class DAGrp20 extends UnicastRemoteObject implements DAGrp20_RMI {
 	//number of processes n
 	private static int port = 1099;
-	private static int n = 3;
+	private int n;
 	private int i;		//process id
 	private VectorClock v;	//vector clock
 	private Buffer s;	//local buffer
 	private ArrayList<MessageBuffer> b;
-	private static Registry registry = null;
+	private Registry registry;
 	
+	/**
+	 * 
+	 * @param argv takes as arguments: process id, number of processes
+	 */
 	public static void main(String argv[]){
 		//add when using multiple machines
 		//System.setSecurityManager(new RMISecurityManager());
-			
-        //create registry
-		registry = createRegistry();
-        for(int i=0; i<n; i++){	//create processes
 			try {
-				//create stub
-				DAGrp20 process = new DAGrp20(i);
-				
-		        // Bind the remote object's stub in the registry
-				String name = "Process"+i;
-				registry.bind(name, process);
-				
-			    System.err.println(name+" is ready");
-	        } catch (Exception e) {
-	            System.err.println("Server exception: " + e.toString());
-	            e.printStackTrace();
-	        }
-		}
+				DAGrp20 process = new DAGrp20(Integer.parseInt(argv[0]), Integer.parseInt(argv[1]));
+			} catch (NumberFormatException | RemoteException | AlreadyBoundException e) {
+				System.out.println("incorrect input");
+				e.printStackTrace();
+				}
+        
+			/*
         try {	//test messaging
         	for(int i=0; i<n; i++){
         		DAGrp20 send = (DAGrp20) registry.lookup("Process"+i);
@@ -69,33 +63,26 @@ public class DAGrp20 extends UnicastRemoteObject implements DAGrp20_RMI {
         	}
 		} catch (Exception e) {
 			e.printStackTrace();
-		}
+		}*/
         System.exit(0);
 	}
 	
 
 	/**
+	 * creates registry and binds this to it
 	 * @param id
 	 * @throws RemoteException
+	 * @throws AlreadyBoundException 
 	 */
-	public DAGrp20(int i) throws RemoteException {
+	public DAGrp20(int i, int n) throws RemoteException, AlreadyBoundException {
 		this.setI(i); //set process id
 		this.v = new VectorClock(n);
 		this.s = new Buffer(n);
 		this.b = new ArrayList<MessageBuffer>();
-	}
-	
-	/**
-	 * @throws RemoteException
-	 * @return registry 
-	 */
-	public static Registry createRegistry(){
-		try {
-			 registry = LocateRegistry.createRegistry(port);
-		} catch (RemoteException e) {
-				e.printStackTrace();
-			}
-		return registry;
+		registry = LocateRegistry.createRegistry(port+i); //TODO hostname for use across machines
+		String name = "Process" + i;
+		registry.bind(name, this);
+		System.err.println(name + " is ready");
 	}
 
 	@Override
@@ -128,16 +115,16 @@ public class DAGrp20 extends UnicastRemoteObject implements DAGrp20_RMI {
 	
 	@Override
 	public void receive(String m, Buffer s, VectorClock v) throws RemoteException {
-		System.out.println("Received message: "+m+" "+s+" "+v);
+		System.out.println(i+": Received message: "+m+" "+s+" "+v);
 		// test if delivery condition is met
 		if(s.p[i] == -1 || s.vc[i].compare(this.v) >= 0){
-			System.out.println("Delivered message:"+m+" to Process"+i);
+			System.out.println(i+": Delivered message:"+m+" to Process"+i);
 			for (int i = 0; i < n; i++) {
 				if(s.p[i] != -1){
 					if(this.s.p[i] == -1 || this.s.vc[i].compare(s.vc[i]) == -1){
 						this.s.p[i] = s.p[i];
 						this.s.vc[i] = s.vc[i];
-						System.out.println("Updated buffer entry "+i+" with "+s.vc[i]);
+						System.out.println(i+": Updated buffer entry "+i+" with "+s.vc[i]);
 					}
 				}
 			}
@@ -145,6 +132,10 @@ public class DAGrp20 extends UnicastRemoteObject implements DAGrp20_RMI {
 			this.v.increment(i);
 		} else {
 			//TODO read buffered messages?
+			if(b.size() != 0){
+				MessageBuffer mb = b.get(0);
+				receive(mb.m, mb.s, mb.v);
+			}
 			b.add(new MessageBuffer(m, s, v));
 			System.out.println("Buffered message");
 		}
