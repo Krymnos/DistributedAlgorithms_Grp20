@@ -12,9 +12,10 @@ import java.util.ArrayList;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * @author Ron
+ * @author Ron, Laura
  *
  */
+
 public class DAGrp20 extends UnicastRemoteObject implements DAGrp20_RMI {
 	//number of processes n
 	private static int port = 1099;
@@ -26,16 +27,11 @@ public class DAGrp20 extends UnicastRemoteObject implements DAGrp20_RMI {
 	private static Registry registry = null;
 	
 	public static void main(String argv[]){
-		
 		//add when using multiple machines
 		//System.setSecurityManager(new RMISecurityManager());
 			
-        	//create registry
-        try {
-			registry = LocateRegistry.createRegistry(port);
-		} catch (RemoteException e1) {
-			e1.printStackTrace();
-		}
+        //create registry
+		registry = createRegistry();
         for(int i=0; i<n; i++){	//create processes
 			try {
 				//create stub
@@ -56,15 +52,19 @@ public class DAGrp20 extends UnicastRemoteObject implements DAGrp20_RMI {
         		DAGrp20 send = (DAGrp20) registry.lookup("Process"+i);
         		int r = ThreadLocalRandom.current().nextInt(0, n);
 				String m = "From "+i+" to "+r;
+				System.out.println("Send message: "+m);
 				send.send(m, r);
 				r = ThreadLocalRandom.current().nextInt(0, n);
 				m = "From "+i+" to "+r;
+				System.out.println("Send message: "+m);
 				send.send(m, r);
 				r = ThreadLocalRandom.current().nextInt(0, n);
 				m = "From "+i+" to "+r;
+				System.out.println("Send message: "+m);
 				send.send(m, r);
 				r = ThreadLocalRandom.current().nextInt(0, n);
 				m = "From "+i+" to "+r;
+				System.out.println("Send message: "+m);
 				send.send(m, r);
         	}
 		} catch (Exception e) {
@@ -84,16 +84,29 @@ public class DAGrp20 extends UnicastRemoteObject implements DAGrp20_RMI {
 		this.s = new Buffer(n);
 		this.b = new ArrayList<MessageBuffer>();
 	}
+	
+	/**
+	 * @throws RemoteException
+	 * @return registry 
+	 */
+	public static Registry createRegistry(){
+		try {
+			 registry = LocateRegistry.createRegistry(port);
+		} catch (RemoteException e) {
+				e.printStackTrace();
+			}
+		return registry;
+	}
 
 	@Override
 	public void send(String m, int recipient) throws RemoteException {
-		/*try {	//random delay
+		try {	//random delay
 			Thread.sleep((long)(Math.random() * 2000));
 		} catch (InterruptedException e1) {
 			e1.printStackTrace();
-		}*/
+		}
 		try {
-			this.s = s.deepClone(s);	//deepClone before incrementing local time 
+			s = deepClone(s);	//deepClone before incrementing local time 
 		} catch (CloneNotSupportedException e) {
 			e.printStackTrace();
 		}
@@ -105,12 +118,14 @@ public class DAGrp20 extends UnicastRemoteObject implements DAGrp20_RMI {
 			e.printStackTrace();
 		} 
 		//insert pair into local buffer
-		System.out.println("update Buffer of "+i);
+		System.out.println("Update Buffer of "+i);
 		this.s.p[recipient] = recipient;
 		this.s.vc[recipient] = v;
 		
 	}
 
+	
+	
 	@Override
 	public void receive(String m, Buffer s, VectorClock v) throws RemoteException {
 		System.out.println("Received message: "+m+" "+s+" "+v);
@@ -143,7 +158,7 @@ public class DAGrp20 extends UnicastRemoteObject implements DAGrp20_RMI {
 		this.i = i;
 	}
 	
-	/*private Buffer deepClone(Buffer b) throws CloneNotSupportedException {
+	private Buffer deepClone(Buffer b) throws CloneNotSupportedException {
 		try {
 		     ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		     ObjectOutputStream oos = new ObjectOutputStream(baos);
@@ -156,6 +171,6 @@ public class DAGrp20 extends UnicastRemoteObject implements DAGrp20_RMI {
 		     e.printStackTrace();
 		     return null;
 		   }
-    }*/
+    }
 
 }

@@ -66,7 +66,7 @@ public class VectorClock implements Cloneable, Serializable{
 		return s;
 	}
 	
-	protected VectorClock deepClone() throws CloneNotSupportedException {
+	/*protected VectorClock deepClone() throws CloneNotSupportedException {
 		try {
 		     ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		     ObjectOutputStream oos = new ObjectOutputStream(baos);
@@ -79,6 +79,6 @@ public class VectorClock implements Cloneable, Serializable{
 		     e.printStackTrace();
 		     return null;
 		   }
-    }
+    }*/
 	
 }
