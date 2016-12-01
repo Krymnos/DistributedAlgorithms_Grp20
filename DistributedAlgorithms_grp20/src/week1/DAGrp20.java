@@ -79,30 +79,40 @@ public class DAGrp20 extends UnicastRemoteObject implements DAGrp20_RMI {
 		this.v = new VectorClock(n);
 		this.s = new Buffer(n);
 		this.b = new ArrayList<MessageBuffer>();
-		System.setProperty("java.rmi.server.hostname", "192.168.x.x");
+		System.setProperty("java.rmi.server.hostname", "145.94.192.78");
 		registry = LocateRegistry.createRegistry(port); //TODO hostname for use across machines
 		String name = "Process" + i;
 		registry.bind(name, this);
 		System.err.println(name + " is ready");
 		
+		try {	// delay
+			Thread.sleep((long)(5000));
+		} catch (InterruptedException e1) {
+			e1.printStackTrace();
+		}
 		//test messaging
-		int r = ThreadLocalRandom.current().nextInt(0, n);
+		//int r = ThreadLocalRandom.current().nextInt(0, n);
+		int r = 1;
 		String m = "From "+i+" to "+r;
-		System.err.println("Send message: "+m);
 		send(m, r);
-		r = ThreadLocalRandom.current().nextInt(0, n);
 		m = "From "+i+" to "+r;
-		System.err.println("Send message: "+m);
 		send(m, r);
-		r = ThreadLocalRandom.current().nextInt(0, n);
 		m = "From "+i+" to "+r;
-		System.err.println("Send message: "+m);
 		send(m, r);
-		r = ThreadLocalRandom.current().nextInt(0, n);
 		m = "From "+i+" to "+r;
-		System.err.println("Send message: "+m);
+		send(m, r);
+		m = "From "+i+" to "+r;
+		send(m, r);
+		m = "From "+i+" to "+r;
+		send(m, r);
+		m = "From "+i+" to "+r;
 		send(m, r);
 		
+		try {	// delay
+			Thread.sleep((long)(5000));
+		} catch (InterruptedException e1) {
+			e1.printStackTrace();
+		}
 	}
 
 	@Override
@@ -112,6 +122,8 @@ public class DAGrp20 extends UnicastRemoteObject implements DAGrp20_RMI {
 		} catch (InterruptedException e1) {
 			e1.printStackTrace();
 		}
+
+		System.err.println("Send message: "+m);
 		try {
 			s = deepClone(s);	//deepClone before incrementing local time 
 		} catch (CloneNotSupportedException e) {
@@ -119,7 +131,8 @@ public class DAGrp20 extends UnicastRemoteObject implements DAGrp20_RMI {
 		}
 		this.v.increment(i);	//increment local time
 		try {	
-			DAGrp20 recip = (DAGrp20) registry.lookup("Process"+recipient);
+			Registry reg = LocateRegistry.getRegistry("145.94.215.68", 1099);
+			DAGrp20_RMI recip = (DAGrp20_RMI) reg.lookup("Process"+recipient);
 			recip.receive(m, s, v);	//invoke remote method
 		} catch (NotBoundException e) {
 			e.printStackTrace();
@@ -139,27 +152,31 @@ public class DAGrp20 extends UnicastRemoteObject implements DAGrp20_RMI {
 		// test if delivery condition is met
 		if(s.p[i] == -1 || s.vc[i].compare(this.v) >= 0){
 			System.out.println(i+": Delivered message:"+m+" to Process"+i);
-			for (int i = 0; i < n; i++) {
-				if(s.p[i] != -1){
-					if(this.s.p[i] == -1 || this.s.vc[i].compare(s.vc[i]) == -1){
-						this.s.p[i] = s.p[i];
-						this.s.vc[i] = s.vc[i];
-						System.out.println(i+": Updated buffer entry "+i+" with "+s.vc[i]);
-					}
-				}
-			}
-			this.v.update(v);
-			this.v.increment(i);
+			deliver(m, s, v);
 		} else {
 			//TODO read buffered messages?
 			if(b.size() != 0){
-				MessageBuffer mb = b.get(0);
-				receive(mb.m, mb.s, mb.v);
+				MessageBuffer mb = b.remove(0);
+				deliver(mb.m, mb.s, mb.v);
 			}
 			b.add(new MessageBuffer(m, s, v));
 			System.out.println("Buffered message");
 		}
 		
+	}
+	
+	private void deliver(String m, Buffer s, VectorClock v){
+		for (int i = 0; i < n; i++) {
+			if(s.p[i] != -1){
+				if(this.s.p[i] == -1 || this.s.vc[i].compare(s.vc[i]) == -1){
+					this.s.p[i] = s.p[i];
+					this.s.vc[i] = s.vc[i];
+					System.out.println(i+": Updated buffer entry "+i+" with "+s.vc[i]);
+				}
+			}
+		}
+		this.v.update(v);
+		this.v.increment(i);
 	}
 	
 	public int getI() {
