@@ -79,6 +79,7 @@ public class DAGrp20 extends UnicastRemoteObject implements DAGrp20_RMI {
 		this.v = new VectorClock(n);
 		this.s = new Buffer(n);
 		this.b = new ArrayList<MessageBuffer>();
+		System.setProperty("java.rmi.server.hostname", "192.168.x.x");
 		registry = LocateRegistry.createRegistry(port); //TODO hostname for use across machines
 		String name = "Process" + i;
 		registry.bind(name, this);
