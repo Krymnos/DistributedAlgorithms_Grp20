@@ -79,16 +79,35 @@ public class DAGrp20 extends UnicastRemoteObject implements DAGrp20_RMI {
 		this.v = new VectorClock(n);
 		this.s = new Buffer(n);
 		this.b = new ArrayList<MessageBuffer>();
-		registry = LocateRegistry.createRegistry(port+i); //TODO hostname for use across machines
+		registry = LocateRegistry.createRegistry(port); //TODO hostname for use across machines
 		String name = "Process" + i;
 		registry.bind(name, this);
 		System.err.println(name + " is ready");
+		
+		//test messaging
+		int r = ThreadLocalRandom.current().nextInt(0, n);
+		String m = "From "+i+" to "+r;
+		System.err.println("Send message: "+m);
+		send(m, r);
+		r = ThreadLocalRandom.current().nextInt(0, n);
+		m = "From "+i+" to "+r;
+		System.err.println("Send message: "+m);
+		send(m, r);
+		r = ThreadLocalRandom.current().nextInt(0, n);
+		m = "From "+i+" to "+r;
+		System.err.println("Send message: "+m);
+		send(m, r);
+		r = ThreadLocalRandom.current().nextInt(0, n);
+		m = "From "+i+" to "+r;
+		System.err.println("Send message: "+m);
+		send(m, r);
+		
 	}
 
 	@Override
 	public void send(String m, int recipient) throws RemoteException {
 		try {	//random delay
-			Thread.sleep((long)(Math.random() * 2000));
+			Thread.sleep((long)(Math.random() * 3000));
 		} catch (InterruptedException e1) {
 			e1.printStackTrace();
 		}

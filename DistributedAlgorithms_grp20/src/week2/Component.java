@@ -24,6 +24,11 @@ public class Component implements Component_RMI, Runnable, Serializable {
 	private Registry reg = null;
 	private int size;
 	
+	/**
+	 * 
+	 * @param size
+	 * @param id
+	 */
 	public Component(int size, int id){
 		this.N = new int[size];
 		this.S = new char[size];
@@ -33,6 +38,7 @@ public class Component implements Component_RMI, Runnable, Serializable {
 		//initialize state arrays
 		if(id == 0){
 			this.S[0] = 'H'; //holding the token
+			System.out.println(i+": (init) changed state to 'H'");
 			this.t= new Token(size);
 			for (int i = 1; i < N.length; i++) {
 				this.S[i] = 'O';
@@ -56,31 +62,33 @@ public class Component implements Component_RMI, Runnable, Serializable {
 		N[i]++;		//increment request number
 		for (int j = 0; j < this.i; j++) {
 			if(S[j] == 'R'){
-				sendRequestTo(j,this.i);
+				sendRequestTo(j);
 			}
 		}
 		for (int j = this.i+1; j < N.length; j++) {	//leave out this.i
 			if(S[j] == 'R'){
-				sendRequestTo(j,this.i);
+				sendRequestTo(j);
 			}
 		}
 	}
 	
-	private void sendRequestTo(int j, int id){
-		//System.out.println(i+": Send Request To: "+ j);	
+	private void sendRequestTo(int j){
+		System.out.println(i+": Send Request To: "+ j);	
 		try {	
-			Registry r = LocateRegistry.getRegistry(port+id);
-			Component p = (Component) r.lookup("Process" + id);
+			Registry r = LocateRegistry.getRegistry(port+j);
+			Component p = (Component) r.lookup("Process" + j);
 			p.receiveReq(i, N[i]);	//TODO stackoverflow
 		} catch (RemoteException | NotBoundException e) {
 			e.printStackTrace();
 		}
 	}
 	private void sendTokenTo(int j){
+		System.out.println(i+": "+this.toString());
 		System.out.println(i+": "+this.t.toString());
 		System.out.println(i+": Send Token To: " + j);
-		try {	
-			Component p = (Component) reg.lookup("Process" + j);
+		try {
+			Registry r = LocateRegistry.getRegistry(port+j);
+			Component p = (Component) r.lookup("Process" + j);
 			Token nt = this.t.deepClone();
 			this.t = null;
 			p.receiveToken(nt);
@@ -100,9 +108,11 @@ public class Component implements Component_RMI, Runnable, Serializable {
 		case 'R':
 			if(S[j] != 'R')
 				S[j] = 'R';	
-				sendRequestTo(j, this.i); //TODO stackoverflow
+				sendRequestTo(j); //TODO stackoverflow
 			break;
 		case 'H':
+			System.out.println(i+": case H");
+			System.out.println(i+": state:"+this.S[i]);
 			S[j] = 'R';
 			S[i] = 'O';
 			this.t.TS[j] = 'R';
@@ -112,6 +122,7 @@ public class Component implements Component_RMI, Runnable, Serializable {
 		}
 	}
 	public void receiveToken(Token t){
+		System.out.println(i+": receive Token");
 		this.t= t;
 		S[i] = 'E';
 		/* == start critical section == */
@@ -132,12 +143,13 @@ public class Component implements Component_RMI, Runnable, Serializable {
 				S[j] = t.TS[j];
 			}
 		}
-		System.out.println(i+": "+this.t.toString());
+		System.out.println(i+": (receiveToken) "+this.t.toString());
 		for (int j = 0; j < N.length; j++) {
 			if(S[j] == 'R'){
 				sendTokenTo(j);
 			} else{		//nobody requesting
 				S[i] = 'H';
+				System.out.println(i+": (receiveToken) changed state to 'H'");
 			}
 		}
 	}
