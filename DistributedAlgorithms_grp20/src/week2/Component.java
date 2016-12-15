@@ -3,6 +3,10 @@
  */
 package week2;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.rmi.AlreadyBoundException;
 import java.rmi.NotBoundException;
@@ -10,12 +14,13 @@ import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.rmi.server.UnicastRemoteObject;
 
 /**
  * @author Ron
  *
  */
-public class Component implements Component_RMI, Runnable, Serializable {
+public class Component extends UnicastRemoteObject implements Component_RMI {
 	private int i;	//id
 	private int[] N;	
 	private char[] S;
@@ -29,7 +34,7 @@ public class Component implements Component_RMI, Runnable, Serializable {
 	 * @param size
 	 * @param id
 	 */
-	public Component(int size, int id){
+	public Component(int size, int id) throws RemoteException{
 		this.N = new int[size];
 		this.S = new char[size];
 		this.i = id;
@@ -38,7 +43,6 @@ public class Component implements Component_RMI, Runnable, Serializable {
 		//initialize state arrays
 		if(id == 0){
 			this.S[0] = 'H'; //holding the token
-			System.out.println(i+": (init) changed state to 'H'");
 			this.t= new Token(size);
 			for (int i = 1; i < N.length; i++) {
 				this.S[i] = 'O';
@@ -51,7 +55,38 @@ public class Component implements Component_RMI, Runnable, Serializable {
 				this.S[i] = 'O'; //previous ones may have token
 			}
 		}
+		try {
+			System.setProperty("java.rmi.server.hostname", "145.94.192.78");
+			reg = LocateRegistry.createRegistry(port); //TODO hostname for use across machines
+			String name = "Process" + i;
+			reg.bind(name, this);
+			System.err.println(name + " is ready");
+			System.out.println(this.toString());
+		} catch (RemoteException | AlreadyBoundException e) {
+			e.printStackTrace();
+		}
+		try {	//random delay
+			Thread.sleep((long)(10000));
+		} catch (InterruptedException e1) {
+			e1.printStackTrace();
+		}	
+		request();
+		
+		try {	//random delay
+			Thread.sleep((long)(10000));
+		} catch (InterruptedException e1) {
+			e1.printStackTrace();
+		}	
+		request();
+		try {	//random delay
+			Thread.sleep((long)(20000));
+		} catch (InterruptedException e1) {
+			e1.printStackTrace();
+		}	
+		System.exit(0);
+		
 	}
+	
 	/**
 	 * Send request to those that may have the token
 	 */
@@ -73,23 +108,22 @@ public class Component implements Component_RMI, Runnable, Serializable {
 	}
 	
 	private void sendRequestTo(int j){
+		System.out.println("");
 		System.out.println(i+": Send Request To: "+ j);	
 		try {	
-			Registry r = LocateRegistry.getRegistry(port+j);
-			Component p = (Component) r.lookup("Process" + j);
+			Registry r = LocateRegistry.getRegistry("145.94.215.68", port);
+			Component_RMI p = (Component_RMI) r.lookup("Process" + j);
 			p.receiveReq(i, N[i]);	//TODO stackoverflow
 		} catch (RemoteException | NotBoundException e) {
 			e.printStackTrace();
 		}
 	}
 	private void sendTokenTo(int j){
-		System.out.println(i+": "+this.toString());
-		System.out.println(i+": "+this.t.toString());
 		System.out.println(i+": Send Token To: " + j);
 		try {
-			Registry r = LocateRegistry.getRegistry(port+j);
-			Component p = (Component) r.lookup("Process" + j);
-			Token nt = this.t.deepClone();
+			Registry r = LocateRegistry.getRegistry("145.94.215.68", port);
+			Component_RMI p = (Component_RMI) r.lookup("Process" + j);
+			Token nt = deepClone(this.t);
 			this.t = null;
 			p.receiveToken(nt);
 		} catch (RemoteException | NotBoundException e) {
@@ -97,6 +131,7 @@ public class Component implements Component_RMI, Runnable, Serializable {
 		}
 	}
 	public void receiveReq(int j, int r){
+		System.out.println(i+": Received Message from "+j+" with r = "+r);
 		N[j] = r;
 		switch (S[i]) {
 		case 'O':
@@ -111,12 +146,12 @@ public class Component implements Component_RMI, Runnable, Serializable {
 				sendRequestTo(j); //TODO stackoverflow
 			break;
 		case 'H':
-			System.out.println(i+": case H");
-			System.out.println(i+": state:"+this.S[i]);
 			S[j] = 'R';
-			S[i] = 'O';
+			this.S[i] = 'O';
+			System.out.println(i+": Changed "+this.toString());
 			this.t.TS[j] = 'R';
 			this.t.TN[j] = r;
+			System.out.println(i+": Changed "+this.t.toString());
 			sendTokenTo(j);
 			break;
 		}
@@ -131,6 +166,7 @@ public class Component implements Component_RMI, Runnable, Serializable {
 		} catch (InterruptedException e1) {
 			e1.printStackTrace();
 		}
+		System.out.println("Performed CS");
 		/* == end critical section == */
 		S[i] = 'O';
 		t.TS[i] = 'O';
@@ -143,16 +179,30 @@ public class Component implements Component_RMI, Runnable, Serializable {
 				S[j] = t.TS[j];
 			}
 		}
-		System.out.println(i+": (receiveToken) "+this.t.toString());
+		System.out.println(i+": Changed "+this.t.toString());
 		for (int j = 0; j < N.length; j++) {
 			if(S[j] == 'R'){
 				sendTokenTo(j);
 			} else{		//nobody requesting
 				S[i] = 'H';
-				System.out.println(i+": (receiveToken) changed state to 'H'");
 			}
 		}
 	}
+	
+	protected Token deepClone(Token t) {
+		try {
+		     ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		     ObjectOutputStream oos = new ObjectOutputStream(baos);
+		     oos.writeObject(t);
+		     ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
+		     ObjectInputStream ois = new ObjectInputStream(bais);
+		     return (Token) ois.readObject();
+		   }
+		   catch (Exception e) {
+		     e.printStackTrace();
+		     return null;
+		   }
+    }
 	
 	@Override
 	public String toString(){
@@ -163,24 +213,6 @@ public class Component implements Component_RMI, Runnable, Serializable {
 		return s+")";
 		
 	}
-	
-	@Override
-	public void run() {
-		try {
-			reg = LocateRegistry.createRegistry(port+i);
-			String name = "Process" + i;
-			reg.bind(name, this);
-			System.err.println(name + " is ready");
-			System.out.println(this.toString());
-		} catch (RemoteException | AlreadyBoundException e) {
-			e.printStackTrace();
-		}
-		try {	//random delay
-			Thread.sleep((long)(Math.random() * 9000));
-		} catch (InterruptedException e1) {
-			e1.printStackTrace();
-		}	
-		request();
-		
-	}
 }
+
+	

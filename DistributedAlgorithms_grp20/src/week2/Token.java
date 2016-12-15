@@ -28,20 +28,7 @@ public class Token implements Serializable {
 			this.TS[i] = 'O';
 		}
 	}
-	protected Token deepClone() {
-		try {
-		     ByteArrayOutputStream baos = new ByteArrayOutputStream();
-		     ObjectOutputStream oos = new ObjectOutputStream(baos);
-		     oos.writeObject(this);
-		     ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
-		     ObjectInputStream ois = new ObjectInputStream(bais);
-		     return (Token) ois.readObject();
-		   }
-		   catch (Exception e) {
-		     e.printStackTrace();
-		     return null;
-		   }
-    }
+	
 	@Override
 	public String toString(){
 		String s = "TN: (";
