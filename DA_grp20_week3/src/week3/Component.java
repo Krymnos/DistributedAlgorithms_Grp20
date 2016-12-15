@@ -42,7 +42,7 @@ public class Component extends UnicastRemoteObject implements Component_RMI {
 		this.id = id;
 		this.edges = edges;
 		this.SN = enumSN.sleeping;
-		this.SE = new enumSE[n];
+		this.SE = new enumSE[edges.length];
 		for (int j = 0; j < SE.length; j++) {
 			SE[j] = enumSE.maybe_in_MST;
 		}
@@ -76,15 +76,15 @@ public class Component extends UnicastRemoteObject implements Component_RMI {
 				System.out.println("min: "+min);
 			}
 		}
-		int j = edges[min][1]; //adjacent edge with minimum weight
+		int j = min; //adjacent edge with minimum weight
 		SE[j] = enumSE.in_MST;
 		LN = 0;
 		SN = enumSN.found;
 		find_count = 0;
 		// send(connect;0) on edge j
 		try {
-			Component_RMI p = (Component_RMI) reg.lookup("Process" + j);
-			System.out.println(id+": Send Connect to "+ j);
+			Component_RMI p = (Component_RMI) reg.lookup("Process" + edges[j][0]);
+			System.out.println(id+": Send Connect to "+ edges[j][0]);
 			p.receiveConnect(LN, id);
 		} catch (RemoteException | NotBoundException e) {
 			e.printStackTrace();
@@ -97,14 +97,15 @@ public class Component extends UnicastRemoteObject implements Component_RMI {
 	public void sendInitiate(){
 		
 	}
-	public void receiveInitiate(int L, int F, enumSN S, int j) throws RemoteException{
-		System.out.println(id+": Received INITIATE from "+j);
+	public void receiveInitiate(int L, int F, enumSN S, int edge) throws RemoteException{
+		int j = findInEdges(edge); //find edge e in local edges array
+		System.out.println(id+": Received INITIATE from "+edge);
 		LN = L;
 		FN = F;
 		SN = S;
 		in_branch = j;
 		best_edge = 0;
-		best_weight = 99999;//should be infinite
+		best_weight = 9999;//should be infinite
 		for (int i = 0; i < SE.length; i++) {
 			if(i==j){
 				continue;
@@ -138,8 +139,9 @@ public class Component extends UnicastRemoteObject implements Component_RMI {
 			report();
 		}
 	}
-	public void receiveTest(int L, int F, int j) throws RemoteException{
-		System.out.println(id+": Received TEST from "+j);
+	public void receiveTest(int L, int F, int edge) throws RemoteException{
+		int j = findInEdges(edge);
+		System.out.println(id+": Received TEST from "+edge);
 		if(this.SN == enumSN.sleeping){
 			wakeUp();	// wakeup at first message
 		} 
@@ -166,8 +168,9 @@ public class Component extends UnicastRemoteObject implements Component_RMI {
 	public void sendAccept(){
 		
 	}
-	public void receiveAccept(int j) throws RemoteException{
-		System.out.println(id+": Received ACCEPT from "+j);
+	public void receiveAccept(int edge) throws RemoteException{
+		int j = findInEdges(edge);
+		System.out.println(id+": Received ACCEPT from "+edge);
 		test_edge = 0;
 		/* TODO add w()
 		if(w(j) < best_weight){
@@ -183,8 +186,9 @@ public class Component extends UnicastRemoteObject implements Component_RMI {
 	public void sendReject(){
 		
 	}
-	public void receiveReject(int j) throws RemoteException{
-		System.out.println(id+": Received REJECT from "+j);
+	public void receiveReject(int edge) throws RemoteException{
+		int j = findInEdges(edge);
+		System.out.println(id+": Received REJECT from "+edge);
 		if(SE[j].equals(enumSE.maybe_in_MST)){
 			SE[j] = enumSE.not_in_MST;
 		}
@@ -201,8 +205,9 @@ public class Component extends UnicastRemoteObject implements Component_RMI {
 			// report best edge towards core 
 		}
 	}
-	public void receiveReport(int w, int j) throws RemoteException{
-		System.out.println(id+": Received REPORT from "+j);
+	public void receiveReport(int w, int edge) throws RemoteException{
+		int j = findInEdges(edge);
+		System.out.println(id+": Received REPORT from "+edge);
 		if(j != in_branch){
 			find_count--;
 			if(w < best_weight){
@@ -236,8 +241,9 @@ public class Component extends UnicastRemoteObject implements Component_RMI {
 			SE[best_edge] = enumSE.in_MST;
 		}
 	}
-	public void receiveChangeRoot(int j) throws RemoteException{
-		System.out.println(id+": Received ChangeRoot from "+j);
+	public void receiveChangeRoot(int edge) throws RemoteException{
+		int j = findInEdges(edge);
+		System.out.println(id+": Received ChangeRoot from "+edge);
 		changeRoot();
 	}
 	/**
@@ -246,17 +252,18 @@ public class Component extends UnicastRemoteObject implements Component_RMI {
 	public void sendConnect(){
 		
 	}
-	public void receiveConnect(int L, int j) throws RemoteException{
+	public void receiveConnect(int L, int edge) throws RemoteException{
+		int j = findInEdges(edge);
+		System.out.println(id+": Received CONNECT from "+edge);
 		if(this.SN == enumSN.sleeping){
 			wakeUp();	// wakeup at first message
-		}
-		System.out.println(id+": Received CONNECT from "+j);
+		}		
 		if(L < LN){	//absorb lower-level fragment
 			SE[j] = enumSE.in_MST;
 			//TODO send(initiate;LN,FN,SN) on edge j 
 			try {
-				Component_RMI p = (Component_RMI) reg.lookup("Process" + j);
-				System.out.println(id+": Send INITIATE to "+ j);
+				Component_RMI p = (Component_RMI) reg.lookup("Process" + edge);
+				System.out.println(id+": Send INITIATE to "+ edge);
 				p.receiveInitiate(LN, FN, SN, id);
 			} catch (RemoteException | NotBoundException e) {
 				e.printStackTrace();
@@ -266,13 +273,13 @@ public class Component extends UnicastRemoteObject implements Component_RMI {
 			}
 		} else{
 			if(SE[j] == enumSE.maybe_in_MST){	//connection cannot be made yet
-				System.out.println(id+": Queued initiate message from "+j);
+				System.out.println(id+": Queued initiate message from "+edge);
 				//TODO append message to queue
 			} else{
 				//TODO send(initiate,LN+1,w(j),find) on edge j
 				try {
-					Component_RMI p = (Component_RMI) reg.lookup("Process" + j);
-					System.out.println(id+": Send INITIATE to "+ j);
+					Component_RMI p = (Component_RMI) reg.lookup("Process" + edge);
+					System.out.println(id+": Send INITIATE(LN+1,w(j),find) to "+ edge);
 					p.receiveInitiate(LN+1, FN, SN, id);
 				} catch (RemoteException | NotBoundException e) {
 					e.printStackTrace();
@@ -280,5 +287,18 @@ public class Component extends UnicastRemoteObject implements Component_RMI {
 					//merge with fragment of same level; edge j new core; start initiate
 			}
 		}
+	}
+	/**
+	 * find edge e in local edges array
+	 * @param e
+	 * @return
+	 */
+	private int findInEdges(int e){
+		for (int i = 0; i < edges.length; i++) {
+			if(edges[i][0] == e){
+				return i;
+			}
+		}
+		return -1;
 	}
 }
