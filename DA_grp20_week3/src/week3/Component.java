@@ -4,12 +4,14 @@
 package week3;
 
 import java.rmi.RemoteException;
+import java.rmi.server.UnicastRemoteObject;
 
 /**
  * @author Ron
  *
  */
-public class Component implements Component_RMI {
+public class Component extends UnicastRemoteObject implements Component_RMI {
+	
 	public enum enumSE { maybe_in_MST, in_MST, not_in_MST }
 	enumSE[] SE;	//state of each adjacent edge
 	int LN;	//level of the current fragment it is part of 
@@ -21,6 +23,27 @@ public class Component implements Component_RMI {
 	int best_edge; //local direction of candidate MOE 
 	int best_weight; //weight of current candidate MOE 
 	int find_count; //number of report messages expected 
+	
+	private int[][] edges;
+	
+	protected Component(int[][] edges) throws RemoteException {
+		this.edges = edges;
+		this.SN = enumSN.sleeping;
+		this.SE = new enumSE[edges.length];
+		for (int i = 0; i < edges.length; i++) {
+			SE[i] = enumSE.maybe_in_MST;
+		}
+	}
+	
+//	@Override
+//	public void run() {
+//		try {	//random delay
+//			Thread.sleep((long)(Math.random()* 2000));
+//		} catch (InterruptedException e1) {
+//			e1.printStackTrace();
+//		}	
+//		wakeUp();
+//	}
 
 	/**
 	 * @param args
@@ -31,9 +54,15 @@ public class Component implements Component_RMI {
 	/**
 	 * 
 	 */
-	private void wakeUp(){
-		//TODO j = adjacent edge of minimum weight
-		int j = 0;
+	protected void wakeUp(){
+		int min = 0;
+		for (int i = 1; i < edges.length; i++) {
+			if(edges[i][1] < edges[min][1]){
+				min = i;
+				System.out.println("min: "+min);
+			}
+		}
+		int j = min;
 		SE[j] = enumSE.in_MST;
 		LN = 0;
 		SN = enumSN.found;
