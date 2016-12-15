@@ -3,7 +3,10 @@
  */
 package week3;
 
+import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 
 /**
@@ -24,15 +27,26 @@ public class Component extends UnicastRemoteObject implements Component_RMI {
 	int best_weight; //weight of current candidate MOE 
 	int find_count; //number of report messages expected 
 	
+	Registry reg;
 	private int[][] edges;
+	private int id;
 	
-	protected Component(int[][] edges) throws RemoteException {
+	/**
+	 * 
+	 * @param edges
+	 * @param id
+	 * @param n Number of processes
+	 * @throws RemoteException
+	 */
+	protected Component(int[][] edges, int id, int n) throws RemoteException {
+		this.id = id;
 		this.edges = edges;
 		this.SN = enumSN.sleeping;
-		this.SE = new enumSE[edges.length];
-		for (int i = 0; i < edges.length; i++) {
-			SE[i] = enumSE.maybe_in_MST;
+		this.SE = new enumSE[n];
+		for (int j = 0; j < SE.length; j++) {
+			SE[j] = enumSE.maybe_in_MST;
 		}
+		this.reg = LocateRegistry.getRegistry(1099);
 	}
 	
 //	@Override
@@ -62,12 +76,19 @@ public class Component extends UnicastRemoteObject implements Component_RMI {
 				System.out.println("min: "+min);
 			}
 		}
-		int j = min;
+		int j = edges[min][1]; //adjacent edge with minimum weight
 		SE[j] = enumSE.in_MST;
 		LN = 0;
 		SN = enumSN.found;
 		find_count = 0;
-		//TODO send(connect;0) on edge j
+		// send(connect;0) on edge j
+		try {
+			Component_RMI p = (Component_RMI) reg.lookup("Process" + j);
+			System.out.println(id+": Send Connect to "+ j);
+			p.receiveConnect(LN, id);
+		} catch (RemoteException | NotBoundException e) {
+			e.printStackTrace();
+		}
 	}
 	/**
 	 * start finding the MOE 
@@ -77,6 +98,7 @@ public class Component extends UnicastRemoteObject implements Component_RMI {
 		
 	}
 	public void receiveInitiate(int L, int F, enumSN S, int j) throws RemoteException{
+		System.out.println(id+": Received INITIATE from "+j);
 		LN = L;
 		FN = F;
 		SN = S;
@@ -117,6 +139,7 @@ public class Component extends UnicastRemoteObject implements Component_RMI {
 		}
 	}
 	public void receiveTest(int L, int F, int j) throws RemoteException{
+		System.out.println(id+": Received TEST from "+j);
 		if(this.SN == enumSN.sleeping){
 			wakeUp();	// wakeup at first message
 		} 
@@ -144,6 +167,7 @@ public class Component extends UnicastRemoteObject implements Component_RMI {
 		
 	}
 	public void receiveAccept(int j) throws RemoteException{
+		System.out.println(id+": Received ACCEPT from "+j);
 		test_edge = 0;
 		/* TODO add w()
 		if(w(j) < best_weight){
@@ -160,6 +184,7 @@ public class Component extends UnicastRemoteObject implements Component_RMI {
 		
 	}
 	public void receiveReject(int j) throws RemoteException{
+		System.out.println(id+": Received REJECT from "+j);
 		if(SE[j].equals(enumSE.maybe_in_MST)){
 			SE[j] = enumSE.not_in_MST;
 		}
@@ -177,6 +202,7 @@ public class Component extends UnicastRemoteObject implements Component_RMI {
 		}
 	}
 	public void receiveReport(int w, int j) throws RemoteException{
+		System.out.println(id+": Received REPORT from "+j);
 		if(j != in_branch){
 			find_count--;
 			if(w < best_weight){
@@ -211,6 +237,7 @@ public class Component extends UnicastRemoteObject implements Component_RMI {
 		}
 	}
 	public void receiveChangeRoot(int j) throws RemoteException{
+		System.out.println(id+": Received ChangeRoot from "+j);
 		changeRoot();
 	}
 	/**
@@ -223,20 +250,35 @@ public class Component extends UnicastRemoteObject implements Component_RMI {
 		if(this.SN == enumSN.sleeping){
 			wakeUp();	// wakeup at first message
 		}
+		System.out.println(id+": Received CONNECT from "+j);
 		if(L < LN){	//absorb lower-level fragment
 			SE[j] = enumSE.in_MST;
-			//TODO send(initiate;LN,FN,SN) on edge j  
+			//TODO send(initiate;LN,FN,SN) on edge j 
+			try {
+				Component_RMI p = (Component_RMI) reg.lookup("Process" + j);
+				System.out.println(id+": Send INITIATE to "+ j);
+				p.receiveInitiate(LN, FN, SN, id);
+			} catch (RemoteException | NotBoundException e) {
+				e.printStackTrace();
+			}
 			if(SN == enumSN.find){
 				find_count++;
 			}
 		} else{
 			if(SE[j] == enumSE.maybe_in_MST){	//connection cannot be made yet
+				System.out.println(id+": Queued initiate message from "+j);
 				//TODO append message to queue
 			} else{
 				//TODO send(initiate,LN+1,w(j),find) on edge j
+				try {
+					Component_RMI p = (Component_RMI) reg.lookup("Process" + j);
+					System.out.println(id+": Send INITIATE to "+ j);
+					p.receiveInitiate(LN+1, FN, SN, id);
+				} catch (RemoteException | NotBoundException e) {
+					e.printStackTrace();
+				}
 					//merge with fragment of same level; edge j new core; start initiate
 			}
 		}
 	}
-
 }

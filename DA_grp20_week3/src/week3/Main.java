@@ -53,7 +53,7 @@ public class Main {
 				edges[1][1] = i;
 			}
 			try {
-				Component p = new Component(edges);
+				Component p = new Component(edges, i, nrNodes);
 				String name = "Process" + i;
 				reg1.bind(name, p);
 //				if(i < 5){
