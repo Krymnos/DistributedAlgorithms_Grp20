@@ -15,7 +15,7 @@ import java.util.List;
  * @author Ron
  *
  */
-public class Component extends UnicastRemoteObject implements Component_RMI {
+public class Component extends UnicastRemoteObject implements Component_RMI, Runnable {
 	
 	public enum enumSE { maybe_in_MST, in_MST, not_in_MST }
 	enumSE[] SE;	//state of each adjacent edge
@@ -53,20 +53,22 @@ public class Component extends UnicastRemoteObject implements Component_RMI {
 		this.msgQueue = new ArrayList<Message>();
 	}
 	
-//	@Override
-//	public void run() {
-//		try {	//random delay
-//			Thread.sleep((long)(Math.random()* 2000));
-//		} catch (InterruptedException e1) {
-//			e1.printStackTrace();
-//		}	
-//		wakeUp();
-//	}
+	@Override
+	public void run() {
+		try {	//random delay
+			Thread.sleep((long)(Math.random()* 5000));
+		} catch (InterruptedException e1) {
+			e1.printStackTrace();
+		}	
+		wakeUp();
+	}
 
 	/**
 	 * 
 	 */
 	protected void wakeUp(){
+		if(!this.SN.equals(enumSN.sleeping)){
+			return;}
 		int min = 0;
 		for (int i = 0; i < edges.length; i++) {
 			if(edges[i][1] < edges[min][1]){
@@ -76,6 +78,7 @@ public class Component extends UnicastRemoteObject implements Component_RMI {
 		}
 		int j = min; //adjacent edge with minimum weight
 		SE[j] = enumSE.in_MST;
+		System.out.println(id+": (WakeUp) Include edge "+edges[j][1]+" in MST");
 		LN = 0;
 		SN = enumSN.found;
 		find_count = 0;
@@ -92,20 +95,19 @@ public class Component extends UnicastRemoteObject implements Component_RMI {
 	 * start finding the MOE 
 	 * (wave of messages from core outwards)
 	 */
-	public void sendInitiate(){
-		
-	}
 	public void receiveInitiate(int L, int F, enumSN S, int edge) throws RemoteException{
 		int j = findInEdges(edge); //find edge e in local edges array
 		System.out.println(id+": Received INITIATE from "+edge);
 		LN = L;
 		FN = F;
+		System.out.println(id+": FN := "+FN);
 		SN = S;
 		in_branch = j;
-		best_edge = 0;
+		System.out.println(id+": in-branch := "+edges[j][1]);
+		best_edge = -1;
 		best_weight = 9999;//should be infinite
 		checkMsgQueue();
-		for (int i = 0; i < SE.length; i++) {
+		for (int i = 0; i < edges.length; i++) {
 			if(i==j){
 				continue;
 			}
@@ -132,10 +134,11 @@ public class Component extends UnicastRemoteObject implements Component_RMI {
 	 */
 	public void test(){
 		boolean t = false; //are there any edges in state maybe_in_MST
-		int min = 0;
+		int min = -1;
 		for (int i = 0; i < edges.length; i++) {
 			if(SE[i].equals(enumSE.maybe_in_MST)){
 				t = true;
+				min = i;
 				if (edges[i][1] < edges[min][1]) {
 					min = i;
 				}}
@@ -152,7 +155,7 @@ public class Component extends UnicastRemoteObject implements Component_RMI {
 				e.printStackTrace();
 			}
 		} else{
-			test_edge = 0;
+			test_edge = -1;
 			report();
 		}
 	}
@@ -176,8 +179,10 @@ public class Component extends UnicastRemoteObject implements Component_RMI {
 					e.printStackTrace();
 				}
 			} else{			//same fragment
+				System.out.println(id+": Same fragment = "+F);
 				if(SE[j].equals(enumSE.maybe_in_MST)){
 					SE[j] = enumSE.not_in_MST;
+					System.out.println(id+": Edge "+edges[j][1]+" is not in MST");
 					checkMsgQueue();
 				}
 				if(test_edge != j){	//optimization to avoid superfluous rejects
@@ -201,10 +206,11 @@ public class Component extends UnicastRemoteObject implements Component_RMI {
 	public void receiveAccept(int edge) throws RemoteException{
 		int j = findInEdges(edge);
 		System.out.println(id+": Received Accept from "+edge);
-		test_edge = 0;
+		test_edge = -1;
 		if(edges[j][1] < best_weight){
 			best_edge = j;
 			best_weight = edges[j][1];
+			System.out.println(id+": Best edge := "+edges[j][1]);
 		}
 		report();
 		
@@ -217,6 +223,7 @@ public class Component extends UnicastRemoteObject implements Component_RMI {
 		System.out.println(id+": Received REJECT from "+edge);
 		if(SE[j].equals(enumSE.maybe_in_MST)){
 			SE[j] = enumSE.not_in_MST;
+			System.out.println(id+": Edge "+edges[j][1]+" is not in MST");
 		}
 		test();	//try the next local edge
 	}
@@ -225,7 +232,7 @@ public class Component extends UnicastRemoteObject implements Component_RMI {
 	 * (wave of messages towards core) 
 	 */
 	public void report(){
-		if(find_count == 0 && test_edge == 0){
+		if(find_count == 0 && test_edge == -1){
 			SN = enumSN.found;
 			checkMsgQueue();
 			// send(report;best-wt) on in-branch
@@ -275,7 +282,7 @@ public class Component extends UnicastRemoteObject implements Component_RMI {
 			// send(change-root) on best edge
 			try {
 				Component_RMI p = (Component_RMI) reg.lookup("Process" + edges[best_edge][0]);
-				System.out.println(id+": Send Report to "+ edges[best_edge][0]);
+				System.out.println(id+": Send change-root to "+ edges[best_edge][0]);
 				p.receiveChangeRoot(id);
 			} catch (RemoteException | NotBoundException e) {
 				e.printStackTrace();
@@ -284,12 +291,13 @@ public class Component extends UnicastRemoteObject implements Component_RMI {
 			// send(connect;LN) on best-edge
 			try {
 				Component_RMI p = (Component_RMI) reg.lookup("Process" + edges[best_edge][0]);
-				System.out.println(id+": Send Report to "+ edges[best_edge][0]);
+				System.out.println(id+": Send Connect to "+ edges[best_edge][0]);
 				p.receiveConnect(LN, id);
 			} catch (RemoteException | NotBoundException e) {
 				e.printStackTrace();
 			}
 			SE[best_edge] = enumSE.in_MST;
+			System.out.println(id+": (changeRoot) Include edge "+edges[best_edge][1]+" in MST");
 			checkMsgQueue();
 		}
 	}
@@ -310,8 +318,9 @@ public class Component extends UnicastRemoteObject implements Component_RMI {
 			wakeUp();	// wake up at first message
 		}		
 		if(L < LN){	//absorb lower-level fragment
-			System.out.println(id+": ABSORB "+edge);
+			System.out.println(id+": ABSORB "+edge+" L: "+L+" LN: "+LN);
 			SE[j] = enumSE.in_MST;
+			System.out.println(id+": (receiveConnect) Include edge "+edges[j][1]+" in MST");
 			checkMsgQueue();
 			//send(initiate;LN,FN,SN) on edge j 
 			try {
@@ -326,17 +335,23 @@ public class Component extends UnicastRemoteObject implements Component_RMI {
 			}
 		} else{
 			if(SE[j] == enumSE.maybe_in_MST){	//connection cannot be made yet
-				System.out.println(id+": Queued initiate message from "+edge);
+				System.out.println(id+": Queued connect message from "+edge);
 				// append message to queue
 				msgQueue.add(new Message(Message.Type.Connect, L , edge,  0, 0));
 			} else{
 				// send(initiate,LN+1,w(j),find) on edge j
 				//merge with fragment of same level; edge j new core; start initiate
 				System.out.println(id+": MERGE with "+edge);
+				FN = edges[j][1];
+				in_branch = j;
+				LN++;
 				try {
 					Component_RMI p = (Component_RMI) reg.lookup("Process" + edge);
 					System.out.println(id+": Send INITIATE(LN+1,w(j),find) to "+ edge);
-					p.receiveInitiate(LN+1, edges[j][1], enumSN.find, id);
+					System.out.println(id+": LN before initiate "+LN);
+					p.receiveInitiate(LN, edges[j][1], enumSN.find, id);
+					System.out.println(id+": LN after initiate "+LN);
+//					
 				} catch (RemoteException | NotBoundException e) {
 					e.printStackTrace();
 				}

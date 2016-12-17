@@ -60,6 +60,7 @@ public class Main {
 //			*/
 			try {
 				Component p = new Component(edges, i, nrNodes);
+				Thread t = new Thread(p);
 				String name = "Process" + i;
 				reg1.bind(name, p);
 //				if(i < 5){
@@ -67,6 +68,8 @@ public class Main {
 //				} else{
 //					reg2.bind(name, p);
 //				}
+				t.start();
+				System.out.println(i+" ready");
 			} catch (RemoteException | AlreadyBoundException e) {
 				e.printStackTrace();
 			}
@@ -74,15 +77,15 @@ public class Main {
 			System.out.println("["+edges[0][0]+"] ["+edges[0][1]+"]");
 			System.out.println("["+edges[1][0]+"] ["+edges[1][1]+"]");
 		}
-		for (int i = 1; i <= nrNodes; i+=1) {
-			try {
-				System.out.println("Main: WakeUp "+i);
-				Component p = (Component) reg1.lookup("Process" + i);
-				p.wakeUp();
-			} catch (RemoteException | NotBoundException e) {
-				e.printStackTrace();
-			}
-		}
+//		for (int i = 1; i <= nrNodes; i+=1) {
+//			try {
+//				System.out.println("Main: WakeUp "+i);
+//				Component p = (Component) reg1.lookup("Process" + i);
+//				p.wakeUp();
+//			} catch (RemoteException | NotBoundException e) {
+//				e.printStackTrace();
+//			}
+//		}
 
 	}
 
