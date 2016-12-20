@@ -33,12 +33,12 @@ public class Main {
 		/*
 		 * example 1
 		 */
-//		int[] w = {1, 5, 3, 7, 2, 6, 4};
+		int[] w = {1, 5, 3, 7, 2, 6, 4};
 		/*
 		 * example 2 (from slides)
 		 * circle with weights in increasing order
 		 */
-		int[] w = {1, 2, 3, 4, 5, 6, 7, 8};
+//		int[] w = {1, 2, 3, 4, 5, 6, 7, 8};
 //		/*
 		int nrNodes = 8;
 		for (int i = 1; i <= nrNodes; i++) {//create a set of edges for each node
@@ -77,15 +77,15 @@ public class Main {
 			System.out.println("["+edges[0][0]+"] ["+edges[0][1]+"]");
 			System.out.println("["+edges[1][0]+"] ["+edges[1][1]+"]");
 		}
-//		for (int i = 1; i <= nrNodes; i+=1) {
-//			try {
-//				System.out.println("Main: WakeUp "+i);
-//				Component p = (Component) reg1.lookup("Process" + i);
-//				p.wakeUp();
-//			} catch (RemoteException | NotBoundException e) {
-//				e.printStackTrace();
-//			}
-//		}
+		for (int i = 1; i <= nrNodes; i+=8) {
+			try {
+				System.out.println("Main: WakeUp "+i);
+				Component p = (Component) reg1.lookup("Process" + i);
+				p.wakeUp();
+			} catch (RemoteException | NotBoundException e) {
+				e.printStackTrace();
+			}
+		}
 
 	}
 
