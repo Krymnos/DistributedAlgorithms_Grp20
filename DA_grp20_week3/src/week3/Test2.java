@@ -18,6 +18,14 @@ import java.util.Random;
  *
  */
 public class Test2 {
+	
+	/*
+	 * Not working!!!
+	 * 
+	 * Not working!!!
+	 * 
+	 * Not working!!!
+	 */
 
 	/**
 	 * @param args
@@ -42,13 +50,16 @@ public class Test2 {
 		Random rnd = new Random();
 		List<Integer> weights = new ArrayList<Integer>();
 		List<Integer> nodes = new ArrayList<Integer>();
+		List<Integer> nodes2 = new ArrayList<Integer>();
 		List<Edge> edgeList = new ArrayList<Edge>();
 		for (int i = 1; i <= nrNodes*1.5; i++) { 
 			weights.add(i);
-			if(i<nrNodes){
+			if(i<=nrNodes){
 				nodes.add(i);
+				nodes2.add(i);
 			} else{
 				nodes.add(i-nrNodes);
+				nodes2.add(i-nrNodes);
 			}
 		}
 		//output for debugging
@@ -71,11 +82,18 @@ public class Test2 {
 		for (int i = 1; i <= nrNodes*1.5; i++) { 
 			int r = rnd.nextInt(weights.size());
 			int r2 = rnd.nextInt(nodes.size());
-			while(nodes.get(r2).equals(i)){
+			int r3 = rnd.nextInt(nodes.size());
+			while(nodes.get(r2).equals(nodes2.get(r3))){
 				r2 = rnd.nextInt(nodes.size());
 			}
-			edgeList.add(new Edge(nodes.remove(r2), i, weights.remove(r)));
 			
+			Edge e = new Edge(nodes.remove(r2), nodes2.remove(r3), weights.remove(r));
+			edgeList.add(e);
+			
+		}
+
+		for (int i = 0; i < edgeList.size(); i++) {
+			System.out.println(edgeList.get(i).toString());
 		}
 		
 		for (int i = 1; i <= nrNodes; i++) {//create a set of edges for each node
@@ -84,10 +102,12 @@ public class Test2 {
 			Iterator<Edge> it = edgeList.iterator();
 			for (int j = 0; j < temp.size(); j++) {
 				Edge e = (Edge) it.next();
+				System.out.println("edge e: "+e);
 				if(e.node1 == i || e.node2 == i){
 					temp.add(e);
 				}
 			}
+			System.out.println("Temp size: "+temp.size());
 			for (int j = 0; j < temp.size(); j++) {
 				Edge e = temp.remove(0);
 				
@@ -98,8 +118,8 @@ public class Test2 {
 					edges[j][0] = e.node1;
 					edges[j][1] = e.weight;
 				}
-				
 			}
+			
 			
 //			*/
 			try {

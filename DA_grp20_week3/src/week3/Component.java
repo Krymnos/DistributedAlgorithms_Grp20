@@ -31,6 +31,7 @@ public class Component extends UnicastRemoteObject implements Component_RMI, Run
 	int best_weight; //weight of current candidate MOE 
 	int find_count; //number of report messages expected 
 	
+	int size = 50;
 	Registry reg;
 	private int[][] edges;
 	private int id;
@@ -88,6 +89,12 @@ public class Component extends UnicastRemoteObject implements Component_RMI, Run
 		find_count = 0;
 		// send(connect;0) on edge j
 		try {
+			if(edges[j][0]<= size/2){
+				reg = LocateRegistry.getRegistry("145.94.195.202", 1099);
+			} else{
+				reg = LocateRegistry.getRegistry("145.94.213.252", 1099);
+			}
+			
 			Component_RMI p = (Component_RMI) reg.lookup("Process" + edges[j][0]);
 			System.out.println(id+": Send Connect to "+ edges[j][0]);
 			
@@ -119,6 +126,11 @@ public class Component extends UnicastRemoteObject implements Component_RMI, Run
 			if(SE[i].equals(enumSE.in_MST)){
 				// send(initiate;L,F,S) on edge i	//propagate initiate in fragment
 				try {
+					if(edges[i][0]<= size/2){
+						reg = LocateRegistry.getRegistry("145.94.195.202", 1099);
+					} else{
+						reg = LocateRegistry.getRegistry("145.94.213.252", 1099);
+					}
 					Component_RMI p = (Component_RMI) reg.lookup("Process" + edges[i][0]);
 					System.out.println(id+": Send Initiate(L,F,S) to "+ edges[i][0]);
 					p.receive(Type.Initiate, id, S, -1, F, L);
@@ -154,6 +166,11 @@ public class Component extends UnicastRemoteObject implements Component_RMI, Run
 			test_edge = min;
 			// send(test;LN,FN) on test-edge
 			try {
+				if(edges[min][0]<= size/2){
+					reg = LocateRegistry.getRegistry("145.94.195.202", 1099);
+				} else{
+					reg = LocateRegistry.getRegistry("145.94.213.252", 1099);
+				}
 				Component_RMI p = (Component_RMI) reg.lookup("Process" + edges[min][0]);
 				System.out.println(id+": Send Test(LN = "+LN+", FN) to "+ edges[min][0]);
 				p.receive(Type.TEST, id, null, -1, FN, LN); 
@@ -178,6 +195,11 @@ public class Component extends UnicastRemoteObject implements Component_RMI, Run
 			if(F != FN){	//other fragment
 				// send accept on edge j	
 				try {
+					if(edges[j][0]<= size/2){
+						reg = LocateRegistry.getRegistry("145.94.195.202", 1099);
+					} else{
+						reg = LocateRegistry.getRegistry("145.94.213.252", 1099);
+					}
 					Component_RMI p = (Component_RMI) reg.lookup("Process" + edges[j][0]);
 					System.out.println(id+": Send Accept to "+ edges[j][0]);
 					p.receive(Type.Accept, id, null, -1, -1, -1);
@@ -194,6 +216,11 @@ public class Component extends UnicastRemoteObject implements Component_RMI, Run
 				if(test_edge != j){	//optimization to avoid superfluous rejects
 					// send(reject) on edge j
 					try {
+						if(edge<= size/2){
+							reg = LocateRegistry.getRegistry("145.94.195.202", 1099);
+						} else{
+							reg = LocateRegistry.getRegistry("145.94.213.252", 1099);
+						}
 						Component_RMI p = (Component_RMI) reg.lookup("Process" + edge);
 						System.out.println(id+": Send Reject to "+ edge);
 						p.receive(Type.Reject, id, null, -1, -1, -1);
@@ -242,6 +269,11 @@ public class Component extends UnicastRemoteObject implements Component_RMI, Run
 			SN = enumSN.found;
 			// send(report;best-wt) on in-branch
 			try {
+				if(edges[in_branch][0]<= size/2){
+				reg = LocateRegistry.getRegistry("145.94.195.202", 1099);
+			} else{
+				reg = LocateRegistry.getRegistry("145.94.213.252", 1099);
+			}
 				Component_RMI p = (Component_RMI) reg.lookup("Process" + edges[in_branch][0]);
 				System.out.println(id+": Send Report to "+ edges[in_branch][0]);
 				p.receive(Type.Report, id, null, best_weight, -1, -1); 
@@ -286,6 +318,11 @@ public class Component extends UnicastRemoteObject implements Component_RMI, Run
 		if(SE[best_edge].equals(enumSE.in_MST)){
 			// send(change-root) on best edge
 			try {
+				if(edges[best_edge][0]<= size/2){
+					reg = LocateRegistry.getRegistry("145.94.195.202", 1099);
+				} else{
+					reg = LocateRegistry.getRegistry("145.94.213.252", 1099);
+				}
 				Component_RMI p = (Component_RMI) reg.lookup("Process" + edges[best_edge][0]);
 				System.out.println(id+": Send change-root to "+ edges[best_edge][0]);
 				p.receive(Type.ChangeRoot, id, null, -1, -1, -1);
@@ -295,6 +332,11 @@ public class Component extends UnicastRemoteObject implements Component_RMI, Run
 		} else{
 			// send(connect;LN) on best-edge
 			try {
+				if(edges[best_edge][0]<= size/2){
+					reg = LocateRegistry.getRegistry("145.94.195.202", 1099);
+				} else{
+					reg = LocateRegistry.getRegistry("145.94.213.252", 1099);
+				}
 				Component_RMI p = (Component_RMI) reg.lookup("Process" + edges[best_edge][0]);
 				System.out.println(id+": Send Connect to "+ edges[best_edge][0]);
 				p.receive(Type.Connect, id, null, -1, -1, LN);
@@ -329,6 +371,11 @@ public class Component extends UnicastRemoteObject implements Component_RMI, Run
 			
 			//send(initiate;LN,FN,SN) on edge j 
 			try {
+				if(edge<= size/2){
+					reg = LocateRegistry.getRegistry("145.94.195.202", 1099);
+				} else{
+					reg = LocateRegistry.getRegistry("145.94.213.252", 1099);
+				}
 				Component_RMI p = (Component_RMI) reg.lookup("Process" + edge);
 				System.out.println(id+": Send Initiate to "+ edge);
 				p.receive(Type.Initiate, id, SN, -1, FN, LN);
@@ -351,6 +398,11 @@ public class Component extends UnicastRemoteObject implements Component_RMI, Run
 //				in_branch = j;
 //				LN++;
 				try {
+					if(edge<= size/2){
+						reg = LocateRegistry.getRegistry("145.94.195.202", 1099);
+					} else{
+						reg = LocateRegistry.getRegistry("145.94.213.252", 1099);
+					}
 					Component_RMI p = (Component_RMI) reg.lookup("Process" + edge);
 					System.out.println(id+": Send INITIATE(LN+1,w(j),find) to "+ edge);
 					System.out.println(id+": LN before initiate "+LN);
